@@ -1,1 +1,1 @@
-nvcc sumArraysOnGPU.cu -o addvector
+nvcc  sumArraysOnGPU.cu -o addvector

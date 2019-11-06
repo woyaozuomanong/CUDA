@@ -37,7 +37,7 @@ void initialData(float *ip,int size)
 
 	for(int i=0;i<size;i++)
 	{
-		ip[i]=(float)(rand() & oxFF)/10.0f;
+		ip[i]=(float)(rand() & 0xFF)/10.0f;
 	}
 }
 
@@ -68,7 +68,7 @@ int main(int argc,char** argv)
 	//malloc host memory;
 	size_t nBytes=nElem*sizeof(float);
 
-	float *h_A;float *h_B; *hostRef, *gpuRef;
+	float *h_A;float *h_B; float *hostRef;float *gpuRef;
 	h_A      =(float*)malloc(nBytes);
 	h_B      =(float*)malloc(nBytes);
 	hostRef  =(float*)malloc(nBytes);
@@ -96,7 +96,7 @@ int main(int argc,char** argv)
 	dim3 block(nElem);
 	dim3 grid (nElem/block.x);
 
-	sumArraysOnGPU<<< grid,block >>>(d_A,d_B,d_C;);
+	sumArraysOnGPU<<< grid,block >>>(d_A,d_B,d_C);
 	printf("Execution configuration <<<%d,%d>>>\n",grid.x,block.x);
 
 	//copy kernel result back to host side
