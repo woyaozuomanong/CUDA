@@ -62,7 +62,7 @@ int main(int argc,char** argv)
 	cudaSetDevice(dev);
 
 	//set up data size of vectors
-	int nElem=32;
+	int nElem=1024;
 	printf("Vector size %d\n",nElem);
 
 	//malloc host memory;
