@@ -1,16 +1,25 @@
 #include <cuda_runtime.h>
 #include <stdio.h>
+#include <sys/time.h>
 
 #define CHECK(call)       \
 {\
 	const cudaError_t error=call;\
 	if(error!=cudaSuccess)\
 	{\
-		printf("error:%s:%d, ",__file__,__line__);\
-		printf("code:%d,reason:%s\n",error,cudageterrorstring(error));\
+		printf("error:%s:%d, ",__FILE__,__LINE__);\
+		printf("code:%d,reason:%s\n",error,cudaGetErrorString(error));\
 		exit(1);\
 	}\
 }\
+
+double cpuSecond()
+{
+	struct timeval tp;
+	gettimeofday(&tp,NULL);
+	return ((double)tp.tv_sec+(double)tp.tv_usec*1e-6);
+}
+
 
 void checkResult(float *hostRef,float *gpuRef,const int N)
 {
@@ -47,10 +56,10 @@ void sumArraysOnHost(float *A,float *B,float *C,const int N)
 		C[idx]=A[idx]+B[idx];
 }
 
-__global__ void sumArraysOnGPU(float *A,float *B,float *C)
+__global__ void sumArraysOnGPU(float *A,float *B,float *C,const int N)
 {
-	int i=threadIdx.x;
-	C[i]=A[i]+B[i];
+	int i=blockIdx.x*blockDim.x+threadIdx.x;
+	if(i<N)C[i]=A[i]+B[i];
 }
 
 int main(int argc,char** argv)
@@ -59,10 +68,13 @@ int main(int argc,char** argv)
 
 	//set up device
 	int dev=0;
-	cudaSetDevice(dev);
+	cudaDeviceProp deviceProp;
+	CHECK(cudaGetDeviceProperties(&deviceProp,dev));
+	printf("Using Device %d:%s\n",dev,deviceProp.name);
+	CHECK(cudaSetDevice(dev));
 
 	//set up data size of vectors
-	int nElem=1024;
+	int nElem=1<<24;
 	printf("Vector size %d\n",nElem);
 
 	//malloc host memory;
@@ -74,9 +86,14 @@ int main(int argc,char** argv)
 	hostRef  =(float*)malloc(nBytes);
 	gpuRef   =(float*)malloc(nBytes);
 
+	double iStart,iElaps;
+
 	//initialize data at host side
+	iStart=cpuSecond();
 	initialData(h_A,nElem);
 	initialData(h_B,nElem);
+	iElaps=cpuSecond()-iStart;
+	printf("Initialize data at host side, time elapsed:%f sec\n",iElaps);
 
 	memset(hostRef,0,nBytes);
 	memset(gpuRef, 0,nBytes);
@@ -93,18 +110,26 @@ int main(int argc,char** argv)
 	cudaMemcpy(d_B,h_B,nBytes,cudaMemcpyHostToDevice);
 
 	//invoke kernel at host side
-	dim3 block(nElem);
-	dim3 grid (nElem/block.x);
+	int iLen;
+	printf("Please input the block size of x:\n");
+	scanf("%d",&iLen);
+	dim3 block(iLen);
+	dim3 grid ((nElem+block.x-1)/block.x);
 
-	sumArraysOnGPU<<< grid,block >>>(d_A,d_B,d_C);
-	printf("Execution configuration <<<%d,%d>>>\n",grid.x,block.x);
+	iStart=cpuSecond();
+	sumArraysOnGPU<<< grid,block >>>(d_A,d_B,d_C,nElem);
+	cudaDeviceSynchronize();
+	iElaps=cpuSecond()-iStart;
+	printf("Execution configuration <<<%d,%d>>> Time elapsed %f sec\n",grid.x,block.x,iElaps);
 
 	//copy kernel result back to host side
 	cudaMemcpy(gpuRef,d_C,nBytes,cudaMemcpyDeviceToHost);
 
 	//add vector at host side for result checks
+	iStart=cpuSecond();
 	sumArraysOnHost(h_A,h_B,hostRef,nElem);
-
+	iElaps=cpuSecond()-iStart;
+	printf("Execution on Host Time elapsed %f sec\n",iElaps);
 	//check device results;
 	checkResult(hostRef,gpuRef,nElem);
 	
