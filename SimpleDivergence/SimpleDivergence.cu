@@ -8,6 +8,7 @@ inline double seconds()
 	struct timezone tzp;
         int i = gettimeofday(&tp, &tzp);
 	return ((double)tp.tv_sec + (double)tp.tv_usec * 1.e-6);
+	//return ((double)tp.tv_sec*1e6 + (double)tp.tv_usec );
 }
 
 
@@ -26,7 +27,7 @@ __global__ void mathkernel1(float *c)
 		b=200.0;
 	}
 	c[tid]=a+b;
-        printf("c[%d]= %f\n",tid,c[tid]);
+//        printf("c[%d]= %f\n",tid,c[tid]);
 }
 
 __global__ void mathkernel2(float *c)
@@ -44,7 +45,7 @@ __global__ void mathkernel2(float *c)
 		b=200.0;
 	}
 	c[tid]=a+b;
-        printf("c[%d]= %f\n",tid,c[tid]);
+        //printf("c[%d]= %f\n",tid,c[tid]);
 }
 __global__ void warmingup(float *c)
 {
@@ -78,8 +79,8 @@ int main(int argc, char **argv)
 	int size=64;
 	int blocksize=64;
 	if(argc>1)blocksize=atoi(argv[1]);
-	if(argc>2)blocksize=atoi(argv[2]);
-	printf("Data size %d ",size);
+	if(argc>2)size=atoi(argv[2]);
+	printf("Data size %d\n ",size);
 
 	//set up execution configuration
 	dim3 block(blocksize,1);
@@ -92,38 +93,38 @@ int main(int argc, char **argv)
 	cudaMalloc((float **)&d_C,nBytes);
 
 	//run a warmup kernel to remove overhead
-	size_t iStart,iElaps;
+	double iStart,iElaps;
 	cudaDeviceSynchronize();
 	iStart=seconds();
 	warmingup<<<grid,block>>> (d_C);
 	cudaDeviceSynchronize();
 	iElaps=seconds()-iStart;
-	printf("warmup    <<<%4d %4d>>> elapsed %d sec \n",grid.x,block.x,iElaps);
+	printf("warmup    <<<%4d %4d>>> elapsed %f sec \n",grid.x,block.x,iElaps);
 	
 	//run kernel 1
 	iStart=seconds();
 	mathkernel1<<<grid,block>>> (d_C);
 	cudaDeviceSynchronize();
 	iElaps=seconds()-iStart;
-	printf("mathkernel1<<<%4d %4d>>> elapsed %d sec \n",grid.x,block.x,iElaps);
+	printf("mathkernel1<<<%4d %4d>>> elapsed %f sec \n",grid.x,block.x,iElaps);
 	//run kernel 2
 	iStart=seconds();
 	mathkernel2<<<grid,block>>> (d_C);
 	cudaDeviceSynchronize();
 	iElaps=seconds()-iStart;
-	printf("mathkernel2<<<%4d %4d>>> elapsed %d sec \n",grid.x,block.x,iElaps);
+	printf("mathkernel2<<<%4d %4d>>> elapsed %f sec \n",grid.x,block.x,iElaps);
 	//run kernel 3
 	iStart=seconds();
 	//mathkernel3<<<grid,block>>> (d_C);
 	cudaDeviceSynchronize();
 	iElaps=seconds()-iStart;
-	printf("mathkernel3<<<%4d %4d>>> elapsed %d sec \n",grid.x,block.x,iElaps);
+	printf("mathkernel3<<<%4d %4d>>> elapsed %f sec \n",grid.x,block.x,iElaps);
 	//run kernel 4
 	iStart=seconds();
 	//mathkernel4<<<grid,block>>> (d_C);
 	cudaDeviceSynchronize();
 	iElaps=seconds()-iStart;
-	printf("mathkernel4<<<%4d %4d>>> elapsed %d sec \n",grid.x,block.x,iElaps);
+	printf("mathkernel4<<<%4d %4d>>> elapsed %f sec \n",grid.x,block.x,iElaps);
 
 	//free gpu memory and reset device
 	cudaFree(d_C);
