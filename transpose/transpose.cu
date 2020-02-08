@@ -104,6 +104,38 @@ __global__ void transposeNaiveCol(float *out,float *in,const int nx,const int ny
 		out[iy*nx+ix]=in[ix*ny+iy];
 }
 
+__global__ void transposeUnroll4Row(float *out,float *in,const int nx,const int ny)
+{
+	int ix=blockIdx.x*blockDim.x*4+threadIdx.x;
+	int iy=blockIdx.y*blockDim.y+threadIdx.y;
+
+	int ti=iy*nx+ix;
+	int to=ix*ny+iy;
+	
+	if(ix+3*blockDim.x<nx && iy<ny)
+		out[to]=in[ti];
+		out[to+ny*blockDim.x]=in[ti+blockDim.x];
+		out[to+ny*2*blockDim.x]=in[ti+2*blockDim.x];
+		out[to+ny*3*blockDim.x]=in[ti+3*blockDim.x];
+}
+
+__global__ void transposeUnroll4Col(float *out,float *in,const int nx,const int ny)
+{
+	int ix=blockIdx.x*blockDim.x*4+threadIdx.x;
+	int iy=blockIdx.y*blockDim.y+threadIdx.y;
+
+	int ti=iy*nx+ix;
+	int to=ix*ny+iy;
+				
+	if(ix+3*blockDim.x<nx && iy<ny)
+		out[ti]=in[to];
+		out[ti+blockDim.x]=in[to+ny*blockDim.x];
+		out[ti+2*blockDim.x]=in[to+ny*2*blockDim.x];
+		out[ti+3*blockDim.x]=in[to+ny*3*blockDim.x];
+}
+
+
+
 int main(int argc,char** argv)
 {
 	printf("%s Starting transpose at ",argv[0]);
@@ -198,6 +230,16 @@ int main(int argc,char** argv)
 		case 3:
 			kernel=&transposeNaiveCol;
 			kernelname="transposeNaiveCol";
+			break;
+		case 4:
+			kernel=&transposeUnroll4Row;
+			kernelname="Unroll4Row";
+			grid.x=(nx+block.x*4-1)/(block.x*4);
+			break;
+		case 5:
+			kernel=&transposeUnroll4Col;
+			kernelname="Unroll4Col";
+			grid.x=(nx+block.x*4-1)/(block.x*4);
 			break;
 		default:
 			break;
