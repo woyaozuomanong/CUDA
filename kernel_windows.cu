@@ -1,10 +1,17 @@
 #include <cuda_runtime.h>
 #include <stdio.h>
+
+#if _WIN32
 #include <time.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <windows.h>
+#endif
+
+#if __linux__
+#include <sys/time.h>
+#endif
 
 #define CHECK(call)       \
 {\
@@ -19,6 +26,7 @@
 
 double cpuSecond()
 {
+#if _WIN32
 	_LARGE_INTEGER time_start;    /*开始时间*/
 	double dqFreq;                /*计时器频率*/
 	LARGE_INTEGER f;            /*计时器频率*/
@@ -26,6 +34,13 @@ double cpuSecond()
 	dqFreq = (double)f.QuadPart;
 	QueryPerformanceCounter(&time_start);
 	return time_start.QuadPart / dqFreq ;//单位为秒，精度为1000 000/（cpu主频）微秒
+#endif
+
+#if __linux__
+	struct timeval tp;
+	gettimeofday(&tp, NULL);
+	return ((double)tp.tv_sec + (double)tp.tv_usec*1e-6);
+#endif
 }
 
 
